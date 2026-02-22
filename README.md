@@ -39,6 +39,27 @@ claude mcp add reamaze \
 
 This stores the server config (including env vars) in `~/.claude.json`. Credentials are never committed to the repo.
 
+## Use Cases
+
+### Customer support with Shopify order lookups
+
+If you run a Shopify store, you can pair this server with the [Shopify MCP server](https://github.com/shopify/dev-mcp) to give Claude full context when replying to customer emails. A typical workflow looks like:
+
+1. List open Reamaze tickets to see what needs attention
+2. Read a customer's conversation thread
+3. Look up their order in Shopify (by order number, email, etc.) to check fulfillment status, tracking info, or payment details
+4. Draft a reply with accurate, order-specific information
+5. Send the reply after you approve it
+
+This turns Claude Code into an AI-assisted support agent that can cross-reference real order data before responding -- no copy-pasting between tabs.
+
+### Other ideas
+
+- **Triage and tagging** -- Scan incoming tickets, update statuses, and apply tags to keep your queue organized
+- **Canned response lookup** -- Search your Reamaze templates to find the right starting point for a reply
+- **Internal notes** -- Add staff-only notes to contacts or conversations for context that customers don't see
+- **Bulk operations** -- Work through a backlog of tickets in a single session, archiving resolved conversations as you go
+
 ## Available Tools
 
 | Tool | Description |
