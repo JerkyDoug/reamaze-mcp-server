@@ -1,5 +1,7 @@
 # Reamaze MCP Server
 
+> **Disclaimer:** This project is not affiliated with, endorsed by, or officially connected to [Reamaze](https://www.reamaze.com/) in any way. I built this because I thought it would be useful for integrating Reamaze with AI-powered workflows, and figured others might find it handy too.
+
 An MCP (Model Context Protocol) server that connects Claude Code to the [Reamaze](https://www.reamaze.com/) customer support platform. Provides tools for listing/reading conversations, replying to tickets, searching contacts, managing notes, and browsing response templates.
 
 ## Prerequisites
@@ -95,6 +97,3 @@ src/
   types.ts            # TypeScript interfaces and constants
 ```
 
-## Disclaimer
-
-This project is not affiliated with, endorsed by, or officially connected to [Reamaze](https://www.reamaze.com/) in any way. I built this because I thought it would be useful for integrating Reamaze with AI-powered workflows, and figured others might find it handy too.
