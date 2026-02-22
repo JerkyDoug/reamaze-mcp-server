@@ -71,6 +71,41 @@ server.tool(
   }
 );
 
+// --- Tool: get_conversation_count ---
+server.tool(
+  "get_conversation_count",
+  "Get a quick count of conversations by filter (open, unassigned, archived, or all) without fetching full ticket data.",
+  {
+    filter: z
+      .enum(["open", "unassigned", "archived", "all"])
+      .default("all")
+      .describe("Filter conversations by status"),
+  },
+  async ({ filter }) => {
+    try {
+      const data = await client.listConversations(filter, 1);
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `${data.total_count} conversation(s) — filter: ${filter}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Error getting conversation count: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 // --- Tool: get_conversation ---
 server.tool(
   "get_conversation",

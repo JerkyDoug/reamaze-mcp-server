@@ -65,6 +65,7 @@ This turns Claude Code into an AI-assisted support agent that can cross-referenc
 | Tool | Description |
 |---|---|
 | `list_conversations` | List tickets with optional filter (open, unassigned, archived, all) and pagination |
+| `get_conversation_count` | Quick count of conversations by filter without fetching full ticket data |
 | `get_conversation` | Get a full conversation thread with all messages |
 | `reply_to_conversation` | Send a reply or internal note to a conversation |
 | `search_contacts` | Search contacts by name or email |
@@ -93,3 +94,7 @@ src/
   reamaze-client.ts   # Reamaze REST API client
   types.ts            # TypeScript interfaces and constants
 ```
+
+## Disclaimer
+
+This project is not affiliated with, endorsed by, or officially connected to [Reamaze](https://www.reamaze.com/) in any way. I built this because I thought it would be useful for integrating Reamaze with AI-powered workflows, and figured others might find it handy too.
