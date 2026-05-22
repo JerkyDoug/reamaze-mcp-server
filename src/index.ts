@@ -477,17 +477,19 @@ Tips:
     body: z.string().describe("Opening message body (plain text, use \\n for line breaks)"),
     contact_name: z.string().describe("Name of the contact to associate with the ticket (for internal tickets, use the requester's name)"),
     contact_email: z.string().describe("Email of the contact. For internal staff tickets, use the requester's email (e.g. doug@jerky.com)"),
+    category_slug: z.string().default("jerky-taste-tester-support").describe("Reamaze channel slug to file the ticket under. Use 'jerky-taste-tester-support' for seeding payouts. Call list_channels to discover others."),
     assignee: z.string().optional().describe("Email of the staff member to assign the ticket to"),
     tag_list: z.array(z.string()).optional().describe("Tags to apply to the ticket, e.g. [\"payout\", \"seeding\"]"),
     internal: z.boolean().default(true).describe("If true (default), the opening message is an internal note not visible to the contact"),
   },
-  async ({ subject, body, contact_name, contact_email, assignee, tag_list, internal }) => {
+  async ({ subject, body, contact_name, contact_email, category_slug, assignee, tag_list, internal }) => {
     try {
       const conversation = await client.createConversation({
         subject,
         body,
         contact_name,
         contact_email,
+        category_slug,
         assignee,
         tag_list,
         internal,

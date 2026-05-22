@@ -268,6 +268,7 @@ export class ReamazeClient {
     body: string;
     contact_name: string;
     contact_email: string;
+    category_slug: string;
     assignee?: string;
     tag_list?: string[];
     internal?: boolean;
@@ -279,10 +280,12 @@ export class ReamazeClient {
           body: params.body,
           visibility: params.internal ? 1 : 0,
         },
-        contact: {
+        // Reamaze API requires "user" (not "contact") and "category" as a plain slug string
+        user: {
           name: params.contact_name,
           email: params.contact_email,
         },
+        category: params.category_slug,
         ...(params.assignee && { assignee: params.assignee }),
         ...(params.tag_list && { tag_list: params.tag_list }),
       },
