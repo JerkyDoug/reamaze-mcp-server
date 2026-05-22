@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { ReamazeClient } from "./reamaze-client.js";
-import { STATUS_LABELS, STATUS_NAMES_TO_VALUES } from "./types.js";
+import { STATUS_LABELS, STATUS_NAMES_TO_VALUES, CHANNEL_TYPE_LABELS } from "./types.js";
 
 const server = new McpServer({
   name: "reamaze",
@@ -178,7 +178,7 @@ IMPORTANT — SEND SAFETY: Before calling this tool, you MUST present the full d
     slug: z.string().describe("The conversation slug"),
     body: z
       .string()
-      .describe("The HTML message body to send"),
+      .describe("The PLAIN TEXT message body to send. Use \\n for line breaks. Do NOT use HTML tags like <br>, <p>, <b> — they render as literal text in customer emails."),
     internal: z
       .boolean()
       .default(false)
@@ -460,6 +460,70 @@ server.tool(
   }
 );
 
+// --- Tool: create_conversation ---
+server.tool(
+  "create_conversation",
+  `Create a new Reamaze conversation (ticket) from scratch. Use this for internal operational requests such as seeding payout requests — situations where you need to create a task for a staff member rather than reply to an inbound customer message.
+
+IMPORTANT — SEND SAFETY: Before calling this tool, present a summary of what ticket will be created and get explicit approval. This creates a real ticket in Reamaze.
+
+Tips:
+- Set internal=true to make the opening message an internal note (staff-only, not visible to any customer).
+- Set assignee to the staff member's email to route it directly to them.
+- Use tag_list to categorize (e.g. ["payout", "seeding"]).
+- contact_email is required by the API — for internal staff tickets use the requester's email (e.g. doug@jerky.com).`,
+  {
+    subject: z.string().describe("Ticket subject line"),
+    body: z.string().describe("Opening message body (plain text, use \\n for line breaks)"),
+    contact_name: z.string().describe("Name of the contact to associate with the ticket (for internal tickets, use the requester's name)"),
+    contact_email: z.string().describe("Email of the contact. For internal staff tickets, use the requester's email (e.g. doug@jerky.com)"),
+    assignee: z.string().optional().describe("Email of the staff member to assign the ticket to"),
+    tag_list: z.array(z.string()).optional().describe("Tags to apply to the ticket, e.g. [\"payout\", \"seeding\"]"),
+    internal: z.boolean().default(true).describe("If true (default), the opening message is an internal note not visible to the contact"),
+  },
+  async ({ subject, body, contact_name, contact_email, assignee, tag_list, internal }) => {
+    try {
+      const conversation = await client.createConversation({
+        subject,
+        body,
+        contact_name,
+        contact_email,
+        assignee,
+        tag_list,
+        internal,
+      });
+
+      const assigneeName = conversation.assignee?.name ?? assignee ?? "Unassigned";
+      const tags = conversation.tag_list?.length > 0 ? conversation.tag_list.join(", ") : "none";
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Conversation created: [${conversation.slug}]`,
+              `Subject: ${conversation.subject}`,
+              `Assignee: ${assigneeName}`,
+              `Tags: ${tags}`,
+              `Created: ${new Date(conversation.created_at).toLocaleString()}`,
+            ].join("\n"),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Error creating conversation: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 // --- Tool: add_note ---
 server.tool(
   "add_note",
@@ -486,6 +550,350 @@ server.tool(
           {
             type: "text" as const,
             text: `Error adding note: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// --- Tool: report_volume ---
+server.tool(
+  "report_volume",
+  "Get daily conversation volume over a date range. Shows how many new tickets came in each day. Defaults to last 30 days.",
+  {
+    start_date: z
+      .string()
+      .optional()
+      .describe("Start date (ISO 8601, e.g. 2026-03-01)"),
+    end_date: z
+      .string()
+      .optional()
+      .describe("End date (ISO 8601, e.g. 2026-03-31)"),
+  },
+  async ({ start_date, end_date }) => {
+    try {
+      const data = await client.getVolumeReport(start_date, end_date);
+
+      const dates = Object.entries(data.conversation_counts).sort(
+        ([a], [b]) => a.localeCompare(b)
+      );
+      const total = dates.reduce((sum, [, count]) => sum + count, 0);
+      const avg = dates.length > 0 ? (total / dates.length).toFixed(1) : "0";
+
+      const lines = dates.map(([date, count]) => `  ${date}: ${count}`);
+
+      const text = [
+        `**Conversation Volume** (${data.start_date} to ${data.end_date})`,
+        `Total: ${total} | Daily avg: ${avg} | Days: ${dates.length}`,
+        ``,
+        ...lines,
+      ].join("\n");
+
+      return { content: [{ type: "text" as const, text }] };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Error getting volume report: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// --- Tool: report_response_time ---
+server.tool(
+  "report_response_time",
+  "Get response time metrics: daily averages, trends, and percentage of tickets responded to within 1 hour, 1 day, and 1 week. Defaults to last 30 days.",
+  {
+    start_date: z
+      .string()
+      .optional()
+      .describe("Start date (ISO 8601, e.g. 2026-03-01)"),
+    end_date: z
+      .string()
+      .optional()
+      .describe("End date (ISO 8601, e.g. 2026-03-31)"),
+  },
+  async ({ start_date, end_date }) => {
+    try {
+      const data = await client.getResponseTimeReport(start_date, end_date);
+
+      const formatTime = (seconds: number) => {
+        if (seconds < 60) return `${Math.round(seconds)}s`;
+        if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+        if (seconds < 86400) return `${(seconds / 3600).toFixed(1)}h`;
+        return `${(seconds / 86400).toFixed(1)}d`;
+      };
+
+      const s = data.summary;
+      const text = [
+        `**Response Time Report** (${data.start_date} to ${data.end_date})`,
+        ``,
+        `**Averages:**`,
+        `  In range: ${formatTime(s.averages.in_range)} | This month: ${formatTime(s.averages.this_month)} | This week: ${formatTime(s.averages.this_week)}`,
+        ``,
+        `**Trends:**`,
+        `  Last 30 days: ${formatTime(s.trends.last_30_days.average)} (${s.trends.last_30_days.change_rate > 0 ? "+" : ""}${(s.trends.last_30_days.change_rate * 100).toFixed(1)}%)`,
+        `  Last 7 days: ${formatTime(s.trends.last_7_days.average)} (${s.trends.last_7_days.change_rate > 0 ? "+" : ""}${(s.trends.last_7_days.change_rate * 100).toFixed(1)}%)`,
+        ``,
+        `**Response Ratio:**`,
+        `  Under 1 hour: ${(s.ratio.under_1_hour * 100).toFixed(1)}%`,
+        `  Under 1 day: ${(s.ratio.under_1_day * 100).toFixed(1)}%`,
+        `  Under 1 week: ${(s.ratio.under_1_week * 100).toFixed(1)}%`,
+      ].join("\n");
+
+      return { content: [{ type: "text" as const, text }] };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Error getting response time report: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// --- Tool: report_staff ---
+server.tool(
+  "report_staff",
+  "Get per-staff performance metrics: response count, average response time, and appreciations. Defaults to last 30 days.",
+  {
+    start_date: z
+      .string()
+      .optional()
+      .describe("Start date (ISO 8601, e.g. 2026-03-01)"),
+    end_date: z
+      .string()
+      .optional()
+      .describe("End date (ISO 8601, e.g. 2026-03-31)"),
+  },
+  async ({ start_date, end_date }) => {
+    try {
+      const data = await client.getStaffReport(start_date, end_date);
+
+      const formatTime = (seconds: number) => {
+        if (seconds < 60) return `${Math.round(seconds)}s`;
+        if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+        if (seconds < 86400) return `${(seconds / 3600).toFixed(1)}h`;
+        return `${(seconds / 86400).toFixed(1)}d`;
+      };
+
+      const entries = Object.entries(data.report).sort(
+        ([, a], [, b]) => b.response_count - a.response_count
+      );
+
+      const lines = entries.map(([name, stats]) => {
+        return `  **${name}**: ${stats.response_count} responses | Avg: ${formatTime(stats.response_time_seconds)} | Appreciations: ${stats.appreciations_count}`;
+      });
+
+      const text = [
+        `**Staff Performance** (${data.start_date} to ${data.end_date})`,
+        ``,
+        ...lines,
+      ].join("\n");
+
+      return { content: [{ type: "text" as const, text }] };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Error getting staff report: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// --- Tool: report_tags ---
+server.tool(
+  "report_tags",
+  "Get tag usage counts over a date range. Shows which issue categories are most common. Defaults to last 30 days.",
+  {
+    start_date: z
+      .string()
+      .optional()
+      .describe("Start date (ISO 8601, e.g. 2026-03-01)"),
+    end_date: z
+      .string()
+      .optional()
+      .describe("End date (ISO 8601, e.g. 2026-03-31)"),
+  },
+  async ({ start_date, end_date }) => {
+    try {
+      const data = await client.getTagReport(start_date, end_date);
+
+      const tags = Object.entries(data.tags).sort(([, a], [, b]) => b - a);
+      const total = tags.reduce((sum, [, count]) => sum + count, 0);
+
+      const lines = tags.map(([tag, count]) => {
+        const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0";
+        return `  ${tag}: ${count} (${pct}%)`;
+      });
+
+      const text = [
+        `**Tag Distribution** (${data.start_date} to ${data.end_date})`,
+        `Total tagged: ${total} | Unique tags: ${tags.length}`,
+        ``,
+        ...lines,
+      ].join("\n");
+
+      return { content: [{ type: "text" as const, text }] };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Error getting tag report: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// --- Tool: report_channel_summary ---
+server.tool(
+  "report_channel_summary",
+  "Get per-channel metrics: response counts, average response time, CSAT rating, and conversation status breakdown. Defaults to last 30 days.",
+  {
+    start_date: z
+      .string()
+      .optional()
+      .describe("Start date (ISO 8601, e.g. 2026-03-01)"),
+    end_date: z
+      .string()
+      .optional()
+      .describe("End date (ISO 8601, e.g. 2026-03-31)"),
+  },
+  async ({ start_date, end_date }) => {
+    try {
+      const data = await client.getChannelSummaryReport(start_date, end_date);
+
+      const formatTime = (seconds: number) => {
+        if (seconds < 60) return `${Math.round(seconds)}s`;
+        if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+        if (seconds < 86400) return `${(seconds / 3600).toFixed(1)}h`;
+        return `${(seconds / 86400).toFixed(1)}d`;
+      };
+
+      const lines = Object.values(data.channels).map((ch) => {
+        const type = ch.category.channel_type_name ?? `Type(${ch.category.channel_type})`;
+        const rating = Number(ch.average_satisfaction_rating);
+        const csat = rating > 0 ? rating.toFixed(1) : "N/A";
+        const responseTime = Number(ch.average_response_time_seconds);
+        return [
+          `**${ch.category.name}** (${type})`,
+          `  Staff responses: ${ch.staff_responses} | Customer responses: ${ch.customer_responses}`,
+          `  Avg response time: ${formatTime(responseTime)}`,
+          `  Active: ${ch.active_conversations} | Resolved: ${ch.resolved_conversations} | Archived: ${ch.archived_conversations}`,
+          `  CSAT: ${csat} | Avg thread size: ${ch.average_thread_size} | Appreciations: ${ch.appreciations}`,
+        ].join("\n");
+      });
+
+      const text = [
+        `**Channel Summary** (${data.start_date} to ${data.end_date})`,
+        ``,
+        ...lines,
+      ].join("\n\n");
+
+      return { content: [{ type: "text" as const, text }] };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Error getting channel summary: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// --- Tool: list_channels ---
+server.tool(
+  "list_channels",
+  "List all configured Reamaze channels with their type, visibility, and settings.",
+  {},
+  async () => {
+    try {
+      const channels = await client.listChannels();
+
+      const lines = channels.map((ch) => {
+        const type = CHANNEL_TYPE_LABELS[ch.channel] ?? `Type(${ch.channel})`;
+        const visibility = ch.visibility === 1 ? "Public" : "Private";
+        return [
+          `**${ch.name}** (${type})`,
+          `  Slug: ${ch.slug} | Visibility: ${visibility} | Spam filter: ${ch.spam_filter_enabled ? "On" : "Off"}`,
+          ch.email ? `  Email: ${ch.email}` : null,
+          ch.settings_reply_from_name ? `  Reply-from: ${ch.settings_reply_from_name}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+      });
+
+      const text = [
+        `**Reamaze Channels** (${channels.length} total)`,
+        ``,
+        ...lines,
+      ].join("\n\n");
+
+      return { content: [{ type: "text" as const, text }] };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Error listing channels: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// --- Tool: list_staff ---
+server.tool(
+  "list_staff",
+  "List all Reamaze staff/agents with their email and when they were added.",
+  {},
+  async () => {
+    try {
+      const data = await client.listStaff();
+
+      const lines = data.staff.map((s) => {
+        return `  **${s.name}** <${s.email}> — joined ${new Date(s.created_at).toLocaleDateString()}`;
+      });
+
+      const text = [
+        `**Reamaze Staff** (${data.total_count} members)`,
+        ``,
+        ...lines,
+      ].join("\n");
+
+      return { content: [{ type: "text" as const, text }] };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Error listing staff: ${error instanceof Error ? error.message : String(error)}`,
           },
         ],
       };

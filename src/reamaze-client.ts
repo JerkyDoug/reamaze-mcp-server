@@ -6,6 +6,13 @@ import type {
   ReamazeContactListResponse,
   ReamazeContact,
   ReamazeResponseTemplateListResponse,
+  ReamazeVolumeReport,
+  ReamazeResponseTimeReport,
+  ReamazeStaffReport,
+  ReamazeTagReport,
+  ReamazeChannelSummaryReport,
+  ReamazeChannel,
+  ReamazeStaffListResponse,
 } from "./types.js";
 
 export class ReamazeClient {
@@ -191,6 +198,100 @@ export class ReamazeClient {
       `/conversations/${encodeURIComponent(slug)}`,
       { method: "PUT", body }
     );
+  }
+
+  // --- Reports ---
+
+  async getVolumeReport(
+    startDate?: string,
+    endDate?: string
+  ): Promise<ReamazeVolumeReport> {
+    const params: Record<string, string> = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return this.request<ReamazeVolumeReport>("/reports/volume", { params });
+  }
+
+  async getResponseTimeReport(
+    startDate?: string,
+    endDate?: string
+  ): Promise<ReamazeResponseTimeReport> {
+    const params: Record<string, string> = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return this.request<ReamazeResponseTimeReport>("/reports/response_time", { params });
+  }
+
+  async getStaffReport(
+    startDate?: string,
+    endDate?: string
+  ): Promise<ReamazeStaffReport> {
+    const params: Record<string, string> = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return this.request<ReamazeStaffReport>("/reports/staff", { params });
+  }
+
+  async getTagReport(
+    startDate?: string,
+    endDate?: string
+  ): Promise<ReamazeTagReport> {
+    const params: Record<string, string> = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return this.request<ReamazeTagReport>("/reports/tags", { params });
+  }
+
+  async getChannelSummaryReport(
+    startDate?: string,
+    endDate?: string
+  ): Promise<ReamazeChannelSummaryReport> {
+    const params: Record<string, string> = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return this.request<ReamazeChannelSummaryReport>("/reports/channel_summary", { params });
+  }
+
+  // --- Channels & Staff ---
+
+  async listChannels(): Promise<ReamazeChannel[]> {
+    const data = await this.request<{ channels: ReamazeChannel[] }>("/channels");
+    return data.channels ?? [];
+  }
+
+  async listStaff(): Promise<ReamazeStaffListResponse> {
+    return this.request<ReamazeStaffListResponse>("/staff");
+  }
+
+  async createConversation(params: {
+    subject: string;
+    body: string;
+    contact_name: string;
+    contact_email: string;
+    assignee?: string;
+    tag_list?: string[];
+    internal?: boolean;
+  }): Promise<ReamazeConversation> {
+    const payload: Record<string, unknown> = {
+      conversation: {
+        subject: params.subject,
+        message: {
+          body: params.body,
+          visibility: params.internal ? 1 : 0,
+        },
+        contact: {
+          name: params.contact_name,
+          email: params.contact_email,
+        },
+        ...(params.assignee && { assignee: params.assignee }),
+        ...(params.tag_list && { tag_list: params.tag_list }),
+      },
+    };
+
+    return this.request<ReamazeConversation>("/conversations", {
+      method: "POST",
+      body: payload,
+    });
   }
 
   async addNote(

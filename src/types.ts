@@ -89,6 +89,114 @@ export interface ReamazeResponseTemplate {
   updated_at: string;
 }
 
+// Report types
+export interface ReamazeVolumeReport {
+  conversation_counts: Record<string, number>;
+  start_date: string;
+  end_date: string;
+}
+
+export interface ReamazeResponseTimeReport {
+  response_times: Record<string, number>;
+  summary: {
+    averages: {
+      in_range: number;
+      this_month: number;
+      this_week: number;
+    };
+    trends: {
+      last_30_days: { average: number; change_rate: number };
+      last_7_days: { average: number; change_rate: number };
+    };
+    ratio: {
+      under_1_hour: number;
+      under_1_day: number;
+      under_1_week: number;
+    };
+  };
+  start_date: string;
+  end_date: string;
+}
+
+export interface ReamazeStaffReportEntry {
+  response_count: number;
+  response_time_seconds: number;
+  appreciations_count: number;
+  responses_trend: Record<string, number>;
+}
+
+export interface ReamazeStaffReport {
+  report: Record<string, ReamazeStaffReportEntry>;
+  start_date: string;
+  end_date: string;
+}
+
+export interface ReamazeTagReport {
+  tags: Record<string, number>;
+  start_date: string;
+  end_date: string;
+}
+
+export interface ReamazeChannelSummaryEntry {
+  staff_responses: number;
+  customer_responses: number;
+  average_response_time_seconds: number | string;
+  appreciations: number;
+  active_conversations: number;
+  resolved_conversations: number;
+  archived_conversations: number;
+  average_satisfaction_rating: number | string | null;
+  average_thread_size: number;
+  category: { id: number; name: string; channel_type: number; channel_type_name: string };
+  brand: { id: number; name: string; url: string };
+}
+
+export interface ReamazeChannelSummaryReport {
+  channels: Record<string, ReamazeChannelSummaryEntry>;
+  start_date: string;
+  end_date: string;
+}
+
+export interface ReamazeChannel {
+  name: string;
+  slug: string;
+  email: string;
+  channel: number;
+  visibility: number;
+  spam_filter_enabled: boolean;
+  settings_reply_from_name: string;
+  settings_signature: string;
+}
+
+export interface ReamazeStaffMember {
+  name: string;
+  email: string;
+  created_at: string;
+  role: Record<string, unknown>;
+}
+
+export interface ReamazeStaffListResponse {
+  staff: ReamazeStaffMember[];
+  page_size: number;
+  page_count: number;
+  total_count: number;
+}
+
+export const CHANNEL_TYPE_LABELS: Record<number, string> = {
+  1: "Email",
+  2: "Twitter",
+  3: "Facebook",
+  6: "Chat",
+  8: "Instagram",
+  9: "SMS",
+  10: "Voice",
+  12: "Facebook Messenger",
+  13: "Facebook Lead",
+  14: "Instagram Ad",
+  15: "WhatsApp",
+  16: "Instagram DM",
+};
+
 // List response wrappers
 export interface ReamazeConversationListResponse {
   conversations: ReamazeConversation[];
