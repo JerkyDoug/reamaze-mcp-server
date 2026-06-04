@@ -131,6 +131,9 @@ server.tool(
         conversation.tag_list.length > 0
           ? `**Tags:** ${conversation.tag_list.join(", ")}`
           : null,
+        conversation.data && Object.keys(conversation.data).length > 0
+          ? `**Custom Fields:** ${JSON.stringify(conversation.data)}`
+          : null,
         `---`,
       ]
         .filter(Boolean)
