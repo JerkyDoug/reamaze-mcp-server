@@ -48,6 +48,12 @@ export interface ReamazeConversation {
   } | null;
   tag_list: string[];
   data: Record<string, unknown>;
+  external_data?: {
+    fb_post_permalink?: string;
+    fb_parent_post_permalink?: string;
+    fb_parent_post_id?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface ReamazeMessage {

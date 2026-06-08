@@ -134,6 +134,12 @@ server.tool(
         conversation.data && Object.keys(conversation.data).length > 0
           ? `**Custom Fields:** ${JSON.stringify(conversation.data)}`
           : null,
+        conversation.external_data?.fb_post_permalink
+          ? `**Facebook Comment URL:** ${conversation.external_data.fb_post_permalink}`
+          : null,
+        conversation.external_data?.fb_parent_post_permalink
+          ? `**Facebook Post URL:** ${conversation.external_data.fb_parent_post_permalink}`
+          : null,
         `---`,
       ]
         .filter(Boolean)
