@@ -52,6 +52,7 @@ export interface ReamazeConversation {
     fb_post_permalink?: string;
     fb_parent_post_permalink?: string;
     fb_parent_post_id?: string;
+    instagram_data?: string; // double-encoded JSON: { permalink, shortcode, ig_id, media_type, media_url }
     [key: string]: unknown;
   };
 }

@@ -140,6 +140,23 @@ server.tool(
         conversation.external_data?.fb_parent_post_permalink
           ? `**Facebook Post URL:** ${conversation.external_data.fb_parent_post_permalink}`
           : null,
+        (() => {
+          // Instagram: external_data.instagram_data is a double-encoded JSON string
+          const raw = conversation.external_data?.instagram_data;
+          if (!raw) return null;
+          try {
+            const ig = JSON.parse(typeof raw === 'string' ? raw : JSON.stringify(raw));
+            const permalink = ig.permalink;
+            const shortcode = ig.shortcode;
+            const commenter = messages.find(m => m.user.name !== conversation.author.name)?.user.name ?? null;
+            return [
+              permalink ? `**Instagram Post URL:** ${permalink}` : null,
+              shortcode ? `**Instagram Shortcode:** ${shortcode}` : null,
+              commenter ? `**Commenter:** ${commenter}` : null,
+              `**Note:** Instagram does not provide a direct comment URL — Linald must find the comment on the post manually.`,
+            ].filter(Boolean).join('\n');
+          } catch { return null; }
+        })(),
         `---`,
       ]
         .filter(Boolean)
