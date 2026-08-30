@@ -64,5 +64,6 @@ _TODO (owner): what has bitten someone here. Candidates worth recording: that Re
 - **`pre-pr-verification.md`** — predicate, worker/batch selector or guard changes carry execution evidence in the PR body.
 - **`test-integrity.md`** — a predicate change needs a test that fails when the predicate is altered.
 - **`queue-worker-invariants.md`** — rotation key, unconditional stamp, terminal only on exhausted attempts.
+- **`code-standards.md`** — the unified bar for TypeScript, error handling, config, logging, naming, security, performance, testing and observability.
 
 **Stack defaults — deviation recorded:** this is a stdio MCP server, not a web app; the house web stack does not apply. Recorded here and in the service-registry entry.
