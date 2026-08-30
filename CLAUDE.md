@@ -1,5 +1,20 @@
 # reamaze-mcp-server
 
+---
+
+> **⚠ This CLAUDE.md has no business context yet.** It was created by `/setup-repo`
+> conformance on 2026-08-30 to carry the engineering standards below, and nothing else.
+> It does not describe what this service does, who uses it, its architecture, or its
+> invariants — so **do not read its presence as "this repo is onboarded."**
+>
+> `/setup-repo` Step 1 requires a CLAUDE.md with business context and says to STOP when
+> one is missing. That stop was bypassed by writing this stub, which is worse than having
+> no file: a later conformance run reads it as conformant.
+>
+> **Owner action:** replace this banner with the real context — what the service does, who
+> it serves, its data sources, its architecture invariants. The standards section below is
+> correct and should stay.
+
 ## Engineering standards
 
 **Working branch:** `features`. PRs go `features` -> `develop` -> `main`. Never commit to `develop` or `main`.
