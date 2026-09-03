@@ -110,15 +110,22 @@ exercised the path.
 until railway service status --json --service <serviceId> --environment <envId> 2>&1 \
   | grep -qE '"status": "(SUCCESS|FAILED)"'; do sleep 10; done
 railway service status --json --service <serviceId> --environment <envId>
-curl -sf <URL><HEALTH>
+curl -fsSL <URL><HEALTH>        # -L is REQUIRED — see below
 ```
 `FAILED`, or a non-2xx health response → STOP and report the status and the body.
+
+**`-L` is not optional and `-f` alone is not enough.** `curl -sf` treats a 3xx as
+success and returns the *redirect's* empty body, so a health check that never reached
+the service exits 0 and reads as a pass. Real case: `https://jerky.com/apps/rank/api/health`
+301s to `www.jerky.com` — without `-L` you certify a redirect. **And read the body, not
+just the exit code:** a proxy or CDN error page is a 200. Confirm the payload is the
+service's own health JSON. **This applies to every `curl` in this step.**
 
 **`gcp-run:<svc>@<region>`**
 ```bash
 gcloud run services describe <svc> --region <region> \
   --format='value(status.latestReadyRevisionName,status.conditions[0].status)'
-curl -sf <URL><HEALTH>
+curl -fsSL <URL><HEALTH>
 ```
 The ready revision must be the one built from the commit you just merged. A stale revision
 serving 200s is the failure this step exists to catch.
