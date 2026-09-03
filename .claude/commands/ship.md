@@ -10,15 +10,20 @@ paths to the same rung is how a branch quietly starts lying about the state of t
 
 > ## Repo configuration  (installed for this repo — the ONLY per-repo differences)
 >
+> Generated from the service registry row for `JerkyDoug/reamaze-mcp-server` (`spec.ship`). That row is the
+> source; if this block and the registry disagree, the registry is right and this is stale.
+>
 > | Setting | Value |
 > |---|---|
 > | `FEATURE` — where work is authored | `features` |
 > | `INTEGRATION` — the dev rung | `develop` |
 > | `RELEASE` — the prod rung | `main` |
 > | `DEPLOY_DEV` | `none` |
-> | `URL_DEV` / `HEALTH_DEV` | — / `—` |
+> | `URL_DEV` — the door people use | — |
+> | `HEALTH_URL_DEV` + `HEALTH_DEV` — what Step 7 curls | — + — |
 > | `DEPLOY_PROD` | `none` |
-> | `URL_PROD` / `HEALTH_PROD` | — / `—` |
+> | `URL_PROD` — the door people use | — |
+> | `HEALTH_URL_PROD` + `HEALTH_PROD` — what Step 7 curls | — + — |
 >
 > Railway environment ids (project `jerky-com`): production `2785f0df-47ea-44b6-a50b-9b3686bf89a0` · development `466d95c5-6c08-413f-853a-08dd431a7fe8`
 >
@@ -110,22 +115,27 @@ exercised the path.
 until railway service status --json --service <serviceId> --environment <envId> 2>&1 \
   | grep -qE '"status": "(SUCCESS|FAILED)"'; do sleep 10; done
 railway service status --json --service <serviceId> --environment <envId>
-curl -fsSL <URL><HEALTH>        # -L is REQUIRED — see below
+curl -fsSL <HEALTH_URL><HEALTH>        # the service's OWN origin, not the front door
 ```
 `FAILED`, or a non-2xx health response → STOP and report the status and the body.
 
-**`-L` is not optional and `-f` alone is not enough.** `curl -sf` treats a 3xx as
-success and returns the *redirect's* empty body, so a health check that never reached
-the service exits 0 and reads as a pass. Real case: `https://jerky.com/apps/rank/api/health`
-301s to `www.jerky.com` — without `-L` you certify a redirect. **And read the body, not
-just the exit code:** a proxy or CDN error page is a 200. Confirm the payload is the
-service's own health JSON. **This applies to every `curl` in this step.**
+**`-L`, and read the body.** `curl -sf` treats a 3xx as success and returns the
+*redirect's* empty body, so a health check that never reached the service exits 0 and
+reads as a pass. And a proxy or CDN error page is itself a 200 — confirm the payload is
+the service's own health JSON, not just that something answered. Both apply to every
+`curl` in this step. (Using `HEALTH_URL` avoids most redirects by construction; keep
+`-L` anyway, because you do not control whether one gets added later.)
+
+**A health route is usually unauthenticated, so it proves liveness and nothing else.**
+It typically sits above the auth gates on purpose. A green health check is not evidence
+about signing, sessions, or permissions in any environment — those need a real
+authenticated request, which belongs in Step 4 or Step 8.
 
 **`gcp-run:<svc>@<region>`**
 ```bash
 gcloud run services describe <svc> --region <region> \
   --format='value(status.latestReadyRevisionName,status.conditions[0].status)'
-curl -fsSL <URL><HEALTH>
+curl -fsSL <HEALTH_URL><HEALTH>
 ```
 The ready revision must be the one built from the commit you just merged. A stale revision
 serving 200s is the failure this step exists to catch.
