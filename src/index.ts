@@ -40,6 +40,7 @@ server.tool(
         return [
           `**[${c.slug}]** ${c.subject}`,
           `  Status: ${status} | Assignee: ${assignee} | Updated: ${updated}`,
+          `  Channel: ${c.category?.name ?? "Unknown"}`,
           `  From: ${c.author.name} <${c.author.email}>`,
           c.tag_list.length > 0 ? `  Tags: ${c.tag_list.join(", ")}` : null,
         ]
@@ -126,6 +127,7 @@ server.tool(
       const header = [
         `**Subject:** ${conversation.subject}`,
         `**Status:** ${status} | **Assignee:** ${assignee}`,
+        `**Channel:** ${conversation.category?.name ?? "Unknown"}`,
         `**From:** ${conversation.author.name} <${conversation.author.email}>`,
         `**Created:** ${new Date(conversation.created_at).toLocaleString()}`,
         conversation.tag_list.length > 0
