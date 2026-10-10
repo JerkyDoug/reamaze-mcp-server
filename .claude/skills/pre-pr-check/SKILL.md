@@ -216,7 +216,7 @@ its own work.
 ## Phase 1b — Three checks against the issue *(skip if there is no linked issue)*
 
 The eight above are about the **shape of your code**. These three are about **the spec**, and they
-are the ones review runs *before* it reads a line of the diff — `docs/review-fix-completeness.md`
+are the ones review runs *before* it reads a line of the diff — `slashbin_ai_tech_lead/docs/review-fix-completeness.md`
 calls this the Gate, and a failure there is REQUEST_CHANGES regardless of how good the code is.
 An author can pass all eight and still be bounced here, having never been told these existed.
 
