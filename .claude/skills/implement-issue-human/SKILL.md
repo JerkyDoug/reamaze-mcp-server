@@ -31,6 +31,7 @@ When told "implement issue &lt;number-or-url&gt;". Implements exactly one issue,
 3. **Classify the change** — this drives Phase 4:
    - **UI change** — modifies a served frontend file. If a change is both UI and non-UI, treat it as UI.
    - **Non-UI change** — server logic, data, config, tooling, docs. An endpoint the UI calls is still non-UI; verify it with `curl`.
+4. **A change to a guarantee that spans many cases gets its case table before its code.** This covers a state machine, a credential boundary, state several writers touch, or a config resolver. Write the invariant in one sentence. List its dimensions from every reader and writer: config including unset and empty, same or different identity, orderings and restarts, aliases, lifecycle phase. Write one row per combination with its expected outcome; refuse where the combination is unsafe. Each row becomes a test. Review exhausts these units the same way, so a build that covers only the example fails with dozens of rows (`implement-approved-issues` Phase 2.5 step 5).
 
 ## Phase 3: Implement
 
