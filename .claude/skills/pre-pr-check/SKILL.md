@@ -1,6 +1,6 @@
 ---
 name: pre-pr-check
-description: Run eight mechanical checks over your own change BEFORE opening the PR — each derived from a real defect found here. Run after the code is written and validated, and before `create-pr`. This is an author's checklist, NOT a review; it never approves anything and never substitutes for the reviewer.
+description: Run eight mechanical checks over your own change BEFORE opening the PR — each derived from a real defect found here. Run after the code is written and validated, and before the PR is opened — `/ship` runs it as its Step 3. This is an author's checklist, NOT a review; it never approves anything and never substitutes for the reviewer.
 argument-hint: "[base-branch, default: develop or main per repo]"
 ---
 
@@ -310,4 +310,4 @@ Rules for the block:
   does not belong here.
 - **An empty block is a valid outcome.** If none of the checks applied, say exactly that.
 
-Then hand off to `create-pr`.
+Then return to `/ship` and continue from the step that called this check (Step 4).
