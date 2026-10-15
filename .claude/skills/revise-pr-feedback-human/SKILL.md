@@ -21,6 +21,7 @@ When told "revise PR &lt;number&gt;" or "address the review on &lt;number&gt;".
    A review that reads "one blocker" in its body usually carries the detail inline. Skipping this step is how a revision addresses the summary and misses the finding.
 3. Categorise each finding by severity (S1, S2, S3, S4) as the reviewer stated it.
 4. Build a checklist. Every finding gets an outcome — fixed, or answered with a reason.
+5. **A finding with a `Matrix:` line is a whole table, not one bug.** Fix every failing row, with a test each, and re-probe the unit's combinations before pushing; your fix creates new rows. A finding marked `Redesign required` means the case table gets rewritten first, then the code.
 
 ## Phase 1: Fix, in severity order
 
